@@ -1,0 +1,42 @@
+#ifndef TILEVIEW_H
+#define TILEVIEW_H
+
+#include <View.h>
+#include "Grid.h"
+
+class Tile;
+
+#define M_CHECK_DROP 'chdr'
+
+#define TILESIZE_SMALL 50
+#define TILESIZE_MEDIUM 60
+#define TILESIZE_LARGE 75
+
+class TileView : public BView
+{
+public:
+	TileView(const BPoint &pt, uint8 tilesize, const char *name,
+			const int32 &resize,const int32 &flags);
+	
+	Tile *GetTile(void) const { return fTile; }
+	void SetTile(Tile *tile);
+	
+	void Draw(BRect r);
+	
+	void MouseDown(BPoint where);
+	void MouseMoved(BPoint pt,uint32 code, const BMessage *msg);
+	void MouseUp(BPoint where);
+	void MessageReceived(BMessage *msg);
+	
+	static void CalcLayout(uint8 tilesize);
+	
+private:
+	void DoDrag(void);
+	
+	bool fMouseDown;
+	Tile *fTile;
+};
+
+void DrawTile(TileView *owner, BRect r);
+
+#endif
