@@ -94,6 +94,6 @@ void AboutView::AttachedToWindow(void)
 void AboutView::Draw(BRect update)
 {
 	DrawBitmap(fLogo, BPoint(0,0));
-	SetHighColor(224,224,224);
-	DrawString(version,versionpos);
+//	SetHighColor(224,224,224);
+//	DrawString(version,versionpos);
 }

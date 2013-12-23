@@ -4,6 +4,12 @@
 #include <MenuItem.h>
 #include <stdio.h>
 #include <Alert.h>
+#include <Bitmap.h>
+#include <TranslationUtils.h>
+#include <Roster.h>
+#include <Path.h>
+#include <Entry.h>
+#include <Directory.h>
 #include "AboutWindow.h"
 #include "Preferences.h"
 #include "TileView.h"
@@ -17,6 +23,9 @@ enum
 	M_SMALL_TILES,
 	M_MEDIUM_TILES,
 	M_LARGE_TILES,
+	M_HUGE_TILES,
+	
+	M_SET_BACKGROUND,
 	
 	M_SET_TILE_COUNT_3,
 	M_SET_TILE_COUNT_4,
@@ -33,6 +42,15 @@ MainWindow::MainWindow(void)
  	fGrid(NULL),
  	fWorkGrid(NULL)
 {
+	app_info ai;
+	be_app->GetAppInfo(&ai);
+	BPath path(&ai.ref);
+	path.GetParent(&path);
+	path.Append("backgrounds");
+	fBackPath = path.Path();
+	fBackPath << "/";
+	
+	static const rgb_color beos_blue = {51,102,152,255};
 	LoadPreferences(PREFERENCES_PATH);
 	
 	if(gPreferences.FindInt8("gridsize",(int8*)&fGridSize)!=B_OK)
@@ -49,7 +67,7 @@ MainWindow::MainWindow(void)
 	
 	fBack = new BView(Bounds(),"background",B_FOLLOW_ALL,B_WILL_DRAW);
 	AddChild(fBack);
-	fBack->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fBack->SetViewColor(beos_blue);
 	
 	fMenuBar = new BMenuBar(BRect(0,0,Bounds().Width(),20),"menubar");
 	fBack->AddChild(fMenuBar);
@@ -76,8 +94,13 @@ MainWindow::MainWindow(void)
 	submenu->AddItem(new BMenuItem("Small",new BMessage(M_SMALL_TILES)));
 	submenu->AddItem(new BMenuItem("Medium",new BMessage(M_MEDIUM_TILES)));
 	submenu->AddItem(new BMenuItem("Large",new BMessage(M_LARGE_TILES)));
+	submenu->AddItem(new BMenuItem("Extra Large",new BMessage(M_HUGE_TILES)));
 	submenu->SetRadioMode(true);
 	menu->AddItem(submenu);
+	
+	fBackMenu = new BMenu("Background");
+	menu->AddItem(fBackMenu);
+	ScanBackgrounds();
 	
 	switch(fTileSize)
 	{
@@ -89,6 +112,16 @@ MainWindow::MainWindow(void)
 		case TILESIZE_MEDIUM:
 		{
 			submenu->ItemAt(1)->SetMarked(true);
+			break;
+		}
+		case TILESIZE_LARGE:
+		{
+			submenu->ItemAt(2)->SetMarked(true);
+			break;
+		}
+		case TILESIZE_HUGE:
+		{
+			submenu->ItemAt(3)->SetMarked(true);
 			break;
 		}
 		default:
@@ -115,6 +148,9 @@ MainWindow::MainWindow(void)
 	r.OffsetTo(corner.x,corner.y);
 	ConstrainWindowFrameToScreen(&r);
 	MoveTo(r.left,r.top);
+
+	if(gPreferences.FindString("background",&fBackName) == B_OK)
+		SetBackground(fBackName.String());
 }
 
 bool MainWindow::QuitRequested(void)
@@ -164,6 +200,14 @@ void MainWindow::MessageReceived(BMessage *msg)
 			GenerateGrid(fGridSize);
 			break;
 		}
+		case M_HUGE_TILES:
+		{
+			fTileSize = TILESIZE_HUGE;
+			gPreferences.ReplaceInt8("tilesize",TILESIZE_LARGE);
+			TileView::CalcLayout(fTileSize);
+			GenerateGrid(fGridSize);
+			break;
+		}
 		case M_SET_TILE_COUNT_3:
 		{
 			fGridSize = 3;
@@ -197,6 +241,15 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fGridSize = 7;
 			gPreferences.ReplaceInt8("gridsize",7);
 			GenerateGrid(fGridSize);
+			break;
+		}
+		case M_SET_BACKGROUND:
+		{
+			BString name;
+			if (msg->FindString("name",&name) == B_OK)
+				SetBackground(name.String());
+			else
+				SetBackground(NULL);
 			break;
 		}
 		case M_HOW_TO_PLAY:
@@ -307,3 +360,59 @@ void MainWindow::GenerateGrid(uint8 size)
 		r.OffsetBy(-(r.left - 10),fTileSize+5);
 	}
 }
+
+void MainWindow::ScanBackgrounds(void)
+{
+	while (fBackMenu->CountItems() > 0)
+	{
+		BMenuItem *item = fBackMenu->ItemAt(0L);
+		delete item;
+	}
+	
+	BMessage *msg = new BMessage(M_SET_BACKGROUND);
+	msg->AddString("name","");
+	fBackMenu->AddItem(new BMenuItem("None",msg));
+	fBackMenu->AddSeparatorItem();
+	
+	BDirectory dir(fBackPath.String());
+	dir.Rewind();
+	entry_ref ref;
+	while (dir.GetNextRef(&ref) == B_OK)
+	{
+		BPath path(&ref);
+		BString name(path.Leaf());
+		int32 ext = name.FindLast(".");
+		if (ext > 0)
+			name.Truncate(ext);
+		
+		msg = new BMessage(M_SET_BACKGROUND);
+		msg->AddString("name",path.Leaf());
+		fBackMenu->AddItem(new BMenuItem(name.String(),msg));
+	}
+}
+
+void MainWindow::SetBackground(const char *name)
+{
+	if (!name || strlen(name) == 0)
+	{
+		fBack->ClearViewBitmap();
+		fBack->Invalidate();
+		fBackName = "";
+		gPreferences.RemoveData("background");
+		return;
+	}
+	
+	BString path(fBackPath);
+	path << name;
+	BBitmap *bmp = BTranslationUtils::GetBitmapFile(path.String());
+	if (bmp)
+	{
+		fBack->SetViewBitmap(bmp);
+		delete bmp;
+		fBackName = name;
+		gPreferences.RemoveData("background");
+		gPreferences.AddString("background",fBackName);
+		fBack->Invalidate();
+	}
+}
+

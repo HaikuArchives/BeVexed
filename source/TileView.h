@@ -11,6 +11,7 @@ class Tile;
 #define TILESIZE_SMALL 50
 #define TILESIZE_MEDIUM 60
 #define TILESIZE_LARGE 75
+#define TILESIZE_HUGE 100
 
 class TileView : public BView
 {
@@ -22,6 +23,7 @@ public:
 	void SetTile(Tile *tile);
 	
 	void Draw(BRect r);
+	rgb_color NumberColor(int num);
 	
 	void MouseDown(BPoint where);
 	void MouseMoved(BPoint pt,uint32 code, const BMessage *msg);
@@ -31,6 +33,7 @@ public:
 	static void CalcLayout(uint8 tilesize);
 	
 private:
+	
 	void DoDrag(void);
 	
 	bool fMouseDown;

@@ -6,7 +6,7 @@
 
 //#define TESTMODE 1
 
-#define MKRAND 	uint8(float(rand()) / RAND_MAX * 9)
+#define MKRAND 	uint8(float(rand()) / RAND_MAX * 10)
 
 Tile::Tile(void)
  :	left(-1),
