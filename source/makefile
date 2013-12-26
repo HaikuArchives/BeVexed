@@ -10,7 +10,7 @@ Grid.cpp \
 MainWindow.cpp \
 TileView.cpp
 
-RDEF= BeVexed.rdef
+RDEFS= BeVexed.rdef
 
 LIBS= be translation
 
