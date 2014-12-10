@@ -7,6 +7,7 @@
 #include <String.h>
 #include <GroupLayout.h>
 #include <GridLayout.h>
+#include "TimerView.h"
 
 class Grid;
 
@@ -21,12 +22,16 @@ private:
 	void	GenerateGrid(uint8 size);
 	void	ScanBackgrounds(void);
 	void	SetBackground(const char *name);
+	void	PushHighScore(int grid, int score);
+	void	ReloadHighScores();
 	
 	Grid *fGrid, *fWorkGrid;
 	BGroupLayout *fLayout;
 	BGridLayout *fGridLayout, *fWorkGridLayout;
 	BMenuBar *fMenuBar;
 	BMenu *fBackMenu;
+	TimerView *fTimer;
+	BTextView *fHighScores;
 	uint8 fGridSize;
 	uint8 fTileSize;
 	

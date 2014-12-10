@@ -11,6 +11,7 @@
 #include <Entry.h>
 #include <Directory.h>
 #include <LayoutBuilder.h>
+#include <Box.h>
 #include "AboutWindow.h"
 #include "Preferences.h"
 #include "TileView.h"
@@ -34,7 +35,9 @@ enum
 	M_SET_TILE_COUNT_6,
 	M_SET_TILE_COUNT_7,
 	
-	M_HOW_TO_PLAY
+	M_HOW_TO_PLAY,
+
+	M_RESET_SCORES
 };
 
 MainWindow::MainWindow(void)
@@ -127,6 +130,8 @@ MainWindow::MainWindow(void)
 	}
 	
 	menu->AddSeparatorItem();
+	menu->AddItem(new BMenuItem("Reset records",new BMessage(M_RESET_SCORES)));
+	menu->AddSeparatorItem();
 	menu->AddItem(new BMenuItem("How to Play…",new BMessage(M_HOW_TO_PLAY)));
 	menu->AddSeparatorItem();
 	menu->AddItem(new BMenuItem("About BeVexed…",new BMessage(B_ABOUT_REQUESTED)));
@@ -134,15 +139,47 @@ MainWindow::MainWindow(void)
 	fWorkGridLayout = new BGridLayout(5.0,5.0);
 	fGridLayout = new BGridLayout(5.0,5.0);
 
+	fTimer = new TimerView();
+	BFont font = be_bold_font;
+	font.SetSize(20);
+	fTimer->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fTimer->SetFontAndColor(&font);
+	fTimer->SetAlignment(B_ALIGN_CENTER);
+
+	fHighScores = new BTextView("scores");
+	font = be_bold_font;
+	font.SetSize(14);
+	fHighScores->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fHighScores->SetFontAndColor(&font);
+	fHighScores->MakeEditable(false);
+	fHighScores->SetAlignment(B_ALIGN_CENTER);
+
+	BBox *scoreBox = new BBox("box");
+	BBox *timeBox = new BBox("box");
 	fLayout = BLayoutBuilder::Group<>(this,B_VERTICAL,0)
 		.Add(fMenuBar)
-		.AddGroup(B_HORIZONTAL,50.0)
+		.AddGroup(B_HORIZONTAL,B_USE_DEFAULT_SPACING)
 			.SetInsets(B_USE_WINDOW_INSETS)
-			.Add(fWorkGridLayout)
-			.Add(fGridLayout)
+			.Add(scoreBox)
+			.AddGroup(B_HORIZONTAL,50.0)
+				.Add(fWorkGridLayout)
+				.Add(fGridLayout)
+			.End()
+		.End()
+			.AddGroup(B_VERTICAL)
+			.SetInsets(B_USE_WINDOW_INSETS)
+			.Add(timeBox)
 		.End();
 	SetLayout(fLayout);
-	fLayout->View()->SetViewColor(beos_blue);
+
+	BLayoutBuilder::Group<>(timeBox,B_HORIZONTAL,0)
+			.SetInsets(B_USE_ITEM_INSETS)
+			.Add(fTimer);
+	timeBox->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+
+	BLayoutBuilder::Group<>(scoreBox,B_HORIZONTAL,0)
+		.SetInsets(B_USE_ITEM_INSETS)
+		.Add(fHighScores);
 
 	GenerateGrid(fGridSize);
 
@@ -252,6 +289,13 @@ void MainWindow::MessageReceived(BMessage *msg)
 			GenerateGrid(fGridSize);
 			break;
 		}
+		case M_RESET_SCORES:
+		{
+			for(int i = 3; i <=7; i++)
+				gPreferences.RemoveName(BString("highscore-") << i);
+			ReloadHighScores();
+			break;
+		}
 		case M_SET_BACKGROUND:
 		{
 			BString name;
@@ -274,6 +318,9 @@ void MainWindow::MessageReceived(BMessage *msg)
 		}
 		case M_CHECK_DROP:
 		{
+			if (!fTimer->Running())
+				fTimer->Start();
+
 			TileView *from, *to;
 			if(msg->FindPointer("from",(void**)&from)!=B_OK ||
 					msg->FindPointer("to",(void**)&to)!=B_OK)
@@ -302,6 +349,10 @@ void MainWindow::MessageReceived(BMessage *msg)
 					{
 						ImageAlert *alert = new ImageAlert("BeVexedYouWin.jpg",'JPEG');
 						alert->Show();
+
+						PushHighScore(fGridSize,fTimer->Elapsed());
+						fTimer->Stop();
+
 						GenerateGrid(fGridSize);
 					}
 				}
@@ -359,6 +410,8 @@ void MainWindow::GenerateGrid(uint8 size)
 
 	BSize psize = fLayout->PreferredSize();
 	ResizeTo(psize.width,psize.height);
+
+	ReloadHighScores();
 }
 
 void MainWindow::ScanBackgrounds(void)
@@ -417,3 +470,31 @@ void MainWindow::SetBackground(const char *name)
 	}
 }
 
+void MainWindow::PushHighScore(int grid, int score)
+{
+	BString key("highscore-");
+	key << grid;
+	for(int i = 0; i < 10; i++)
+	{
+		int32 val;
+		if(gPreferences.FindInt32(key,i,&val)!=B_OK) {
+			gPreferences.AddInt32(key,score);
+			break;
+		}
+
+		if(val > score) {
+			gPreferences.ReplaceInt32(key,i,score);
+			score = val;
+		}
+	}
+}
+
+void MainWindow::ReloadHighScores()
+{
+	int32 val;
+	BString key("highscore-");
+	key << fGridSize;
+	fHighScores->Delete(0,fHighScores->TextLength());
+	for(int i = 0; gPreferences.FindInt32(key,i,&val)==B_OK; i++)
+		fHighScores->Insert(BString().SetToFormat("%02d:%02d\n", val / 60, val % 60));
+}
