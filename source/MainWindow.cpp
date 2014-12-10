@@ -10,6 +10,7 @@
 #include <Path.h>
 #include <Entry.h>
 #include <Directory.h>
+#include <LayoutBuilder.h>
 #include "AboutWindow.h"
 #include "Preferences.h"
 #include "TileView.h"
@@ -65,13 +66,8 @@ MainWindow::MainWindow(void)
 		gPreferences.AddInt8("tilesize",TILESIZE_MEDIUM);
 	}
 	
-	fBack = new BView(Bounds(),"background",B_FOLLOW_ALL,B_WILL_DRAW);
-	AddChild(fBack);
-	fBack->SetViewColor(beos_blue);
-	
-	fMenuBar = new BMenuBar(BRect(0,0,Bounds().Width(),20),"menubar");
-	fBack->AddChild(fMenuBar);
-	
+	fMenuBar = new BMenuBar("menubar");
+
 	BMenu *menu = new BMenu("Game");
 	fMenuBar->AddItem(menu);
 	
@@ -97,7 +93,6 @@ MainWindow::MainWindow(void)
 	submenu->AddItem(new BMenuItem("Extra Large",new BMessage(M_HUGE_TILES)));
 	submenu->SetRadioMode(true);
 	menu->AddItem(submenu);
-	
 	fBackMenu = new BMenu("Background");
 	menu->AddItem(fBackMenu);
 	ScanBackgrounds();
@@ -135,6 +130,20 @@ MainWindow::MainWindow(void)
 	menu->AddItem(new BMenuItem("How to Play…",new BMessage(M_HOW_TO_PLAY)));
 	menu->AddSeparatorItem();
 	menu->AddItem(new BMenuItem("About BeVexed…",new BMessage(B_ABOUT_REQUESTED)));
+
+	fWorkGridLayout = new BGridLayout(5.0,5.0);
+	fGridLayout = new BGridLayout(5.0,5.0);
+
+	fLayout = BLayoutBuilder::Group<>(this,B_VERTICAL,0)
+		.Add(fMenuBar)
+		.AddGroup(B_HORIZONTAL,50.0)
+			.SetInsets(B_USE_WINDOW_INSETS)
+			.Add(fWorkGridLayout)
+			.Add(fGridLayout)
+		.End();
+	SetLayout(fLayout);
+	fLayout->View()->SetViewColor(beos_blue);
+
 	GenerateGrid(fGridSize);
 
 	BPoint corner;
@@ -314,51 +323,42 @@ void MainWindow::GenerateGrid(uint8 size)
 		delete fGrid;
 		delete fWorkGrid;
 	}
-	
-	fBack->RemoveChild(fMenuBar);
-	while(fBack->CountChildren()>0)
-	{
-		BView *child = fBack->ChildAt(0);
-		child->RemoveSelf();
-		delete child;
-	}
-	fBack->AddChild(fMenuBar);
+
+	while(fGridLayout->CountItems()>0)
+		fGridLayout->RemoveItem(0l);
+	while(fWorkGridLayout->CountItems()>0)
+		fWorkGridLayout->RemoveItem(0l);
 	
 	fGrid = new Grid(size);
 	fGrid->GeneratePuzzle();
 	fWorkGrid = new Grid(size);
-	
-	ResizeTo( ((fTileSize+5) * size * 2) + 70,
-				((fTileSize+5) * size) + fMenuBar->Frame().Height() + 20 );
-	
-	BRect r(10,fMenuBar->Frame().bottom + 10,
-			10 + fTileSize,10 + fMenuBar->Frame().bottom + fTileSize);
-	
+
+	BPoint origin = BPoint(0,0);
+
 	for(uint8 row=0; row<size; row++)
 	{
 		for(uint8 col=0; col<size; col++)
 		{
-			TileView *tile = new TileView(r.LeftTop(),fTileSize,"tile",
+			TileView *tile = new TileView(origin,fTileSize,"tile",
 											B_FOLLOW_NONE,B_WILL_DRAW);
-			fBack->AddChild(tile);
-			r.OffsetBy(fTileSize + 5,0);
+			fWorkGridLayout->AddView(tile,col,row);
 			
 			tile->SetTile(fWorkGrid->TileAt((size*row) + col));
 		}
 		
-		r.OffsetBy(50,0);
 		for(uint8 col=0; col<size; col++)
 		{
-			TileView *tile = new TileView(r.LeftTop(),fTileSize,"tile",
+			TileView *tile = new TileView(origin,fTileSize,"tile",
 											B_FOLLOW_NONE,B_WILL_DRAW);
-			fBack->AddChild(tile);
-			r.OffsetBy(fTileSize + 5,0);
+			fGridLayout->AddView(tile,col,row);
 			
 			tile->SetTile(fGrid->TileAt((size*row) + col));
 		}
 		
-		r.OffsetBy(-(r.left - 10),fTileSize+5);
 	}
+
+	BSize psize = fLayout->PreferredSize();
+	ResizeTo(psize.width,psize.height);
 }
 
 void MainWindow::ScanBackgrounds(void)
@@ -393,10 +393,11 @@ void MainWindow::ScanBackgrounds(void)
 
 void MainWindow::SetBackground(const char *name)
 {
+	BView *view = fLayout->View();
 	if (!name || strlen(name) == 0)
 	{
-		fBack->ClearViewBitmap();
-		fBack->Invalidate();
+		view->ClearViewBitmap();
+		view->Invalidate();
 		fBackName = "";
 		gPreferences.RemoveData("background");
 		return;
@@ -407,12 +408,12 @@ void MainWindow::SetBackground(const char *name)
 	BBitmap *bmp = BTranslationUtils::GetBitmapFile(path.String());
 	if (bmp)
 	{
-		fBack->SetViewBitmap(bmp);
+		view->SetViewBitmap(bmp);
 		delete bmp;
 		fBackName = name;
 		gPreferences.RemoveData("background");
 		gPreferences.AddString("background",fBackName);
-		fBack->Invalidate();
+		view->Invalidate();
 	}
 }
 

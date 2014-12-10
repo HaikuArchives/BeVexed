@@ -5,6 +5,8 @@
 #include <Window.h>
 #include <MenuBar.h>
 #include <String.h>
+#include <GroupLayout.h>
+#include <GridLayout.h>
 
 class Grid;
 
@@ -21,7 +23,8 @@ private:
 	void	SetBackground(const char *name);
 	
 	Grid *fGrid, *fWorkGrid;
-	BView *fBack;
+	BGroupLayout *fLayout;
+	BGridLayout *fGridLayout, *fWorkGridLayout;
 	BMenuBar *fMenuBar;
 	BMenu *fBackMenu;
 	uint8 fGridSize;
