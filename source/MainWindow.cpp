@@ -10,6 +10,8 @@
 #include <Path.h>
 #include <Entry.h>
 #include <Directory.h>
+#include <LayoutBuilder.h>
+#include <Box.h>
 #include "AboutWindow.h"
 #include "Preferences.h"
 #include "TileView.h"
@@ -33,7 +35,9 @@ enum
 	M_SET_TILE_COUNT_6,
 	M_SET_TILE_COUNT_7,
 	
-	M_HOW_TO_PLAY
+	M_HOW_TO_PLAY,
+
+	M_RESET_SCORES
 };
 
 MainWindow::MainWindow(void)
@@ -65,13 +69,8 @@ MainWindow::MainWindow(void)
 		gPreferences.AddInt8("tilesize",TILESIZE_MEDIUM);
 	}
 	
-	fBack = new BView(Bounds(),"background",B_FOLLOW_ALL,B_WILL_DRAW);
-	AddChild(fBack);
-	fBack->SetViewColor(beos_blue);
-	
-	fMenuBar = new BMenuBar(BRect(0,0,Bounds().Width(),20),"menubar");
-	fBack->AddChild(fMenuBar);
-	
+	fMenuBar = new BMenuBar("menubar");
+
 	BMenu *menu = new BMenu("Game");
 	fMenuBar->AddItem(menu);
 	
@@ -97,7 +96,6 @@ MainWindow::MainWindow(void)
 	submenu->AddItem(new BMenuItem("Extra Large",new BMessage(M_HUGE_TILES)));
 	submenu->SetRadioMode(true);
 	menu->AddItem(submenu);
-	
 	fBackMenu = new BMenu("Background");
 	menu->AddItem(fBackMenu);
 	ScanBackgrounds();
@@ -132,9 +130,57 @@ MainWindow::MainWindow(void)
 	}
 	
 	menu->AddSeparatorItem();
+	menu->AddItem(new BMenuItem("Reset records",new BMessage(M_RESET_SCORES)));
+	menu->AddSeparatorItem();
 	menu->AddItem(new BMenuItem("How to Play…",new BMessage(M_HOW_TO_PLAY)));
 	menu->AddSeparatorItem();
 	menu->AddItem(new BMenuItem("About BeVexed…",new BMessage(B_ABOUT_REQUESTED)));
+
+	fWorkGridLayout = new BGridLayout(5.0,5.0);
+	fGridLayout = new BGridLayout(5.0,5.0);
+
+	fTimer = new TimerView();
+	BFont font = be_bold_font;
+	font.SetSize(20);
+	fTimer->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fTimer->SetFontAndColor(&font);
+	fTimer->SetAlignment(B_ALIGN_CENTER);
+
+	fHighScores = new BTextView("scores");
+	font = be_bold_font;
+	font.SetSize(14);
+	fHighScores->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fHighScores->SetFontAndColor(&font);
+	fHighScores->MakeEditable(false);
+	fHighScores->SetAlignment(B_ALIGN_CENTER);
+
+	BBox *scoreBox = new BBox("box");
+	BBox *timeBox = new BBox("box");
+	fLayout = BLayoutBuilder::Group<>(this,B_VERTICAL,0)
+		.Add(fMenuBar)
+		.AddGroup(B_HORIZONTAL,B_USE_DEFAULT_SPACING)
+			.SetInsets(B_USE_WINDOW_INSETS)
+			.Add(scoreBox)
+			.AddGroup(B_HORIZONTAL,50.0)
+				.Add(fWorkGridLayout)
+				.Add(fGridLayout)
+			.End()
+		.End()
+			.AddGroup(B_VERTICAL)
+			.SetInsets(B_USE_WINDOW_INSETS)
+			.Add(timeBox)
+		.End();
+	SetLayout(fLayout);
+
+	BLayoutBuilder::Group<>(timeBox,B_HORIZONTAL,0)
+			.SetInsets(B_USE_ITEM_INSETS)
+			.Add(fTimer);
+	timeBox->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+
+	BLayoutBuilder::Group<>(scoreBox,B_HORIZONTAL,0)
+		.SetInsets(B_USE_ITEM_INSETS)
+		.Add(fHighScores);
+
 	GenerateGrid(fGridSize);
 
 	BPoint corner;
@@ -243,6 +289,13 @@ void MainWindow::MessageReceived(BMessage *msg)
 			GenerateGrid(fGridSize);
 			break;
 		}
+		case M_RESET_SCORES:
+		{
+			for(int i = 3; i <=7; i++)
+				gPreferences.RemoveName(BString("highscore-") << i);
+			ReloadHighScores();
+			break;
+		}
 		case M_SET_BACKGROUND:
 		{
 			BString name;
@@ -265,6 +318,9 @@ void MainWindow::MessageReceived(BMessage *msg)
 		}
 		case M_CHECK_DROP:
 		{
+			if (!fTimer->Running())
+				fTimer->Start();
+
 			TileView *from, *to;
 			if(msg->FindPointer("from",(void**)&from)!=B_OK ||
 					msg->FindPointer("to",(void**)&to)!=B_OK)
@@ -293,6 +349,10 @@ void MainWindow::MessageReceived(BMessage *msg)
 					{
 						ImageAlert *alert = new ImageAlert("BeVexedYouWin.jpg",'JPEG');
 						alert->Show();
+
+						PushHighScore(fGridSize,fTimer->Elapsed());
+						fTimer->Stop();
+
 						GenerateGrid(fGridSize);
 					}
 				}
@@ -314,51 +374,44 @@ void MainWindow::GenerateGrid(uint8 size)
 		delete fGrid;
 		delete fWorkGrid;
 	}
-	
-	fBack->RemoveChild(fMenuBar);
-	while(fBack->CountChildren()>0)
-	{
-		BView *child = fBack->ChildAt(0);
-		child->RemoveSelf();
-		delete child;
-	}
-	fBack->AddChild(fMenuBar);
+
+	while(fGridLayout->CountItems()>0)
+		fGridLayout->RemoveItem(0l);
+	while(fWorkGridLayout->CountItems()>0)
+		fWorkGridLayout->RemoveItem(0l);
 	
 	fGrid = new Grid(size);
 	fGrid->GeneratePuzzle();
 	fWorkGrid = new Grid(size);
-	
-	ResizeTo( ((fTileSize+5) * size * 2) + 70,
-				((fTileSize+5) * size) + fMenuBar->Frame().Height() + 20 );
-	
-	BRect r(10,fMenuBar->Frame().bottom + 10,
-			10 + fTileSize,10 + fMenuBar->Frame().bottom + fTileSize);
-	
+
+	BPoint origin = BPoint(0,0);
+
 	for(uint8 row=0; row<size; row++)
 	{
 		for(uint8 col=0; col<size; col++)
 		{
-			TileView *tile = new TileView(r.LeftTop(),fTileSize,"tile",
+			TileView *tile = new TileView(origin,fTileSize,"tile",
 											B_FOLLOW_NONE,B_WILL_DRAW);
-			fBack->AddChild(tile);
-			r.OffsetBy(fTileSize + 5,0);
+			fWorkGridLayout->AddView(tile,col,row);
 			
 			tile->SetTile(fWorkGrid->TileAt((size*row) + col));
 		}
 		
-		r.OffsetBy(50,0);
 		for(uint8 col=0; col<size; col++)
 		{
-			TileView *tile = new TileView(r.LeftTop(),fTileSize,"tile",
+			TileView *tile = new TileView(origin,fTileSize,"tile",
 											B_FOLLOW_NONE,B_WILL_DRAW);
-			fBack->AddChild(tile);
-			r.OffsetBy(fTileSize + 5,0);
+			fGridLayout->AddView(tile,col,row);
 			
 			tile->SetTile(fGrid->TileAt((size*row) + col));
 		}
 		
-		r.OffsetBy(-(r.left - 10),fTileSize+5);
 	}
+
+	BSize psize = fLayout->PreferredSize();
+	ResizeTo(psize.width,psize.height);
+
+	ReloadHighScores();
 }
 
 void MainWindow::ScanBackgrounds(void)
@@ -393,10 +446,11 @@ void MainWindow::ScanBackgrounds(void)
 
 void MainWindow::SetBackground(const char *name)
 {
+	BView *view = fLayout->View();
 	if (!name || strlen(name) == 0)
 	{
-		fBack->ClearViewBitmap();
-		fBack->Invalidate();
+		view->ClearViewBitmap();
+		view->Invalidate();
 		fBackName = "";
 		gPreferences.RemoveData("background");
 		return;
@@ -407,12 +461,40 @@ void MainWindow::SetBackground(const char *name)
 	BBitmap *bmp = BTranslationUtils::GetBitmapFile(path.String());
 	if (bmp)
 	{
-		fBack->SetViewBitmap(bmp);
+		view->SetViewBitmap(bmp);
 		delete bmp;
 		fBackName = name;
 		gPreferences.RemoveData("background");
 		gPreferences.AddString("background",fBackName);
-		fBack->Invalidate();
+		view->Invalidate();
 	}
 }
 
+void MainWindow::PushHighScore(int grid, int score)
+{
+	BString key("highscore-");
+	key << grid;
+	for(int i = 0; i < 10; i++)
+	{
+		int32 val;
+		if(gPreferences.FindInt32(key,i,&val)!=B_OK) {
+			gPreferences.AddInt32(key,score);
+			break;
+		}
+
+		if(val > score) {
+			gPreferences.ReplaceInt32(key,i,score);
+			score = val;
+		}
+	}
+}
+
+void MainWindow::ReloadHighScores()
+{
+	int32 val;
+	BString key("highscore-");
+	key << fGridSize;
+	fHighScores->Delete(0,fHighScores->TextLength());
+	for(int i = 0; gPreferences.FindInt32(key,i,&val)==B_OK; i++)
+		fHighScores->Insert(BString().SetToFormat("%02d:%02d\n", val / 60, val % 60));
+}
