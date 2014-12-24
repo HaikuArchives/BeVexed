@@ -45,13 +45,22 @@ MainWindow::MainWindow(void)
  :	BWindow(BRect(100,100,500,400),"BeVexed",B_TITLED_WINDOW_LOOK,
  	B_NORMAL_WINDOW_FEEL, B_ASYNCHRONOUS_CONTROLS | B_NOT_RESIZABLE),
  	fGrid(NULL),
- 	fWorkGrid(NULL)
+	fWorkGrid(NULL),
+	fBackPaths(2, true)
 {
 	BPath path;
 	find_directory(B_USER_SETTINGS_DIRECTORY, &path);
 	path.Append("BeVexed");
-	fBackPath = BString(path.Path()) << "/backgrounds/";
+
 	fPrefPath = BString(path.Path()) << "/settings";
+	
+	BString* pathString = new BString(path.Path());
+	pathString->Append("/backgrounds/");
+	fBackPaths.AddItem(pathString);
+
+	find_directory(B_SYSTEM_DATA_DIRECTORY, &path);
+	path.Append("BeVexed/backgrounds");
+	fBackPaths.AddItem(new BString(path.Path()));
 
 	static const rgb_color beos_blue = {51,102,152,255};
 	LoadPreferences(fPrefPath);
@@ -426,20 +435,22 @@ void MainWindow::ScanBackgrounds(void)
 	fBackMenu->AddItem(new BMenuItem("None",msg));
 	fBackMenu->AddSeparatorItem();
 	
-	BDirectory dir(fBackPath.String());
-	dir.Rewind();
-	entry_ref ref;
-	while (dir.GetNextRef(&ref) == B_OK)
-	{
-		BPath path(&ref);
-		BString name(path.Leaf());
-		int32 ext = name.FindLast(".");
-		if (ext > 0)
-			name.Truncate(ext);
-		
-		msg = new BMessage(M_SET_BACKGROUND);
-		msg->AddString("name",path.Leaf());
-		fBackMenu->AddItem(new BMenuItem(name.String(),msg));
+	for (int i = 0; i < fBackPaths.CountItems(); i++) {
+		BDirectory dir(fBackPaths.ItemAt(i)->String());
+		dir.Rewind();
+		entry_ref ref;
+		while (dir.GetNextRef(&ref) == B_OK)
+		{
+			BPath path(&ref);
+			BString name(path.Leaf());
+			int32 ext = name.FindLast(".");
+			if (ext > 0)
+				name.Truncate(ext);
+
+			msg = new BMessage(M_SET_BACKGROUND);
+			msg->AddString("name", path.Path());
+			fBackMenu->AddItem(new BMenuItem(name.String(),msg));
+		}
 	}
 }
 
@@ -455,9 +466,7 @@ void MainWindow::SetBackground(const char *name)
 		return;
 	}
 	
-	BString path(fBackPath);
-	path << name;
-	BBitmap *bmp = BTranslationUtils::GetBitmapFile(path.String());
+	BBitmap *bmp = BTranslationUtils::GetBitmapFile(BString(name));
 	if (bmp)
 	{
 		view->SetViewBitmap(bmp);

@@ -7,6 +7,7 @@
 #include <String.h>
 #include <GroupLayout.h>
 #include <GridLayout.h>
+#include <ObjectList.h>
 #include "TimerView.h"
 
 class Grid;
@@ -35,7 +36,7 @@ private:
 	uint8 fGridSize;
 	uint8 fTileSize;
 	
-	BString fBackPath;
+	BObjectList<BString> fBackPaths;
 	BString fPrefPath;
 	BString fBackName;
 };
