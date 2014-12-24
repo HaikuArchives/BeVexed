@@ -11,8 +11,6 @@ extern BLocker prefsLock;
 extern BMessage gPreferences;
 extern BString gAppPath;
 
-#define PREFERENCES_PATH "/boot/home/config/settings/BeVexed"
-
 status_t SavePreferences(const char *path);
 status_t LoadPreferences(const char *path);
 

@@ -12,6 +12,7 @@
 #include <Directory.h>
 #include <LayoutBuilder.h>
 #include <Box.h>
+#include <FindDirectory.h>
 #include "AboutWindow.h"
 #include "Preferences.h"
 #include "TileView.h"
@@ -46,16 +47,14 @@ MainWindow::MainWindow(void)
  	fGrid(NULL),
  	fWorkGrid(NULL)
 {
-	app_info ai;
-	be_app->GetAppInfo(&ai);
-	BPath path(&ai.ref);
-	path.GetParent(&path);
-	path.Append("backgrounds");
-	fBackPath = path.Path();
-	fBackPath << "/";
-	
+	BPath path;
+	find_directory(B_USER_SETTINGS_DIRECTORY, &path);
+	path.Append("BeVexed");
+	fBackPath = BString(path.Path()) << "/backgrounds/";
+	fPrefPath = BString(path.Path()) << "/settings";
+
 	static const rgb_color beos_blue = {51,102,152,255};
-	LoadPreferences(PREFERENCES_PATH);
+	LoadPreferences(fPrefPath);
 	
 	if(gPreferences.FindInt8("gridsize",(int8*)&fGridSize)!=B_OK)
 	{
@@ -202,7 +201,7 @@ MainWindow::MainWindow(void)
 bool MainWindow::QuitRequested(void)
 {
 	gPreferences.ReplacePoint("corner",Frame().LeftTop());
-	SavePreferences(PREFERENCES_PATH);
+	SavePreferences(fPrefPath);
 	be_app->PostMessage(B_QUIT_REQUESTED);
 	return true;
 }
