@@ -7,6 +7,7 @@
 #include <Roster.h>
 #include <Application.h>
 #include <Path.h>
+#include <Directory.h>
 
 BLocker prefsLock;
 BMessage gPreferences;
@@ -56,6 +57,10 @@ status_t SavePreferences(const char *path)
 	if(!path)
 		return B_ERROR;
 	
+	BPath dirPath;
+	BPath(path).GetParent(&dirPath);
+	create_directory(dirPath.Path(), S_IRWXU | S_IRWXG | S_IRWXO);
+
 	prefsLock.Lock();
 	
 	BFile file(path,B_READ_WRITE | B_ERASE_FILE | B_CREATE_FILE);
