@@ -36,6 +36,7 @@ private:
 	uint8 fTileSize;
 	
 	BString fBackPath;
+	BString fPrefPath;
 	BString fBackName;
 };
 
