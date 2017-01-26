@@ -13,7 +13,7 @@ TimerView.cpp
 
 RDEFS= BeVexed.rdef
 
-LIBS= be translation
+LIBS= be translation $(STDCPPLIBS)
 
 APP_VERSION = 1.1
 

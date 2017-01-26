@@ -384,9 +384,9 @@ void MainWindow::GenerateGrid(uint8 size)
 	}
 
 	while(fGridLayout->CountItems()>0)
-		fGridLayout->RemoveItem(0l);
+		fGridLayout->RemoveItem((int32)0);
 	while(fWorkGridLayout->CountItems()>0)
-		fWorkGridLayout->RemoveItem(0l);
+		fWorkGridLayout->RemoveItem((int32)0);
 	
 	fGrid = new Grid(size);
 	fGrid->GeneratePuzzle();
