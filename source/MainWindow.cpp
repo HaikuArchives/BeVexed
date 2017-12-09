@@ -30,11 +30,7 @@ enum
 	
 	M_SET_BACKGROUND,
 	
-	M_SET_TILE_COUNT_3,
-	M_SET_TILE_COUNT_4,
-	M_SET_TILE_COUNT_5,
-	M_SET_TILE_COUNT_6,
-	M_SET_TILE_COUNT_7,
+	M_SET_TILE_COUNT,
 	
 	M_HOW_TO_PLAY,
 
@@ -82,17 +78,19 @@ MainWindow::MainWindow(void)
 	BMenu *menu = new BMenu("Game");
 	fMenuBar->AddItem(menu);
 	
-	menu->AddItem(new BMenuItem("New",new BMessage(M_NEW_GAME),'N'));
-	
-	BMenu *submenu = new BMenu("Difficulty");
-	submenu->AddItem(new BMenuItem("Beginner",new BMessage(M_SET_TILE_COUNT_3)));
-	submenu->AddItem(new BMenuItem("Easy",new BMessage(M_SET_TILE_COUNT_4)));
-	submenu->AddItem(new BMenuItem("Medium",new BMessage(M_SET_TILE_COUNT_5)));
-	submenu->AddItem(new BMenuItem("Hard",new BMessage(M_SET_TILE_COUNT_6)));
-	submenu->AddItem(new BMenuItem("Master",new BMessage(M_SET_TILE_COUNT_7)));
+	BMenu *submenu = new BMenu("New");
+	const char* labels[] = { "Beginner", "Easy", "Medium", "Hard", "Master" };
+	BMessage msg(M_SET_TILE_COUNT);
+	msg.AddInt8("gridsize", 0);
+
+	for (int8 i = 3; i <= 7; i++) {
+		msg.ReplaceInt8("gridsize", i);
+		submenu->AddItem(new BMenuItem(labels[i - 3], new BMessage(msg)));
+	}
+
 	submenu->SetRadioMode(true);
-	menu->AddSeparatorItem();
 	menu->AddItem(submenu);
+	menu->AddSeparatorItem();
 	
 	BMenuItem *item = submenu->ItemAt(fGridSize - 3);
 	item->SetMarked(true);
@@ -225,11 +223,6 @@ void MainWindow::MessageReceived(BMessage *msg)
 			ab->Show();
 			break;
 		}
-		case M_NEW_GAME:
-		{
-			GenerateGrid(fGridSize);
-			break;
-		}
 		case M_SMALL_TILES:
 		{
 			fTileSize = TILESIZE_SMALL;
@@ -262,38 +255,21 @@ void MainWindow::MessageReceived(BMessage *msg)
 			GenerateGrid(fGridSize);
 			break;
 		}
-		case M_SET_TILE_COUNT_3:
+		case M_SET_TILE_COUNT:	// new game
 		{
-			fGridSize = 3;
-			gPreferences.ReplaceInt8("gridsize",3);
-			GenerateGrid(fGridSize);
-			break;
-		}
-		case M_SET_TILE_COUNT_4:
-		{
-			fGridSize = 4;
-			gPreferences.ReplaceInt8("gridsize",4);
-			GenerateGrid(fGridSize);
-			break;
-		}
-		case M_SET_TILE_COUNT_5:
-		{
-			fGridSize = 5;
-			gPreferences.ReplaceInt8("gridsize",5);
-			GenerateGrid(fGridSize);
-			break;
-		}
-		case M_SET_TILE_COUNT_6:
-		{
-			fGridSize = 6;
-			gPreferences.ReplaceInt8("gridsize",6);
-			GenerateGrid(fGridSize);
-			break;
-		}
-		case M_SET_TILE_COUNT_7:
-		{
-			fGridSize = 7;
-			gPreferences.ReplaceInt8("gridsize",7);
+			if (fTimer->Running()) {
+				BAlert* alert = new BAlert("",
+					"Are you sure you want to abort the current game?",
+					"No", "Yes");
+				alert->SetShortcut(0, B_ESCAPE);
+
+				if (alert->Go() == 0) break;
+
+				fTimer->Stop();
+			}
+
+			msg->FindInt8("gridsize", (int8*) &fGridSize);
+			gPreferences.ReplaceInt8("gridsize", fGridSize);
 			GenerateGrid(fGridSize);
 			break;
 		}
