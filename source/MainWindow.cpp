@@ -368,7 +368,7 @@ void MainWindow::GenerateGrid(uint8 size)
 	fGrid->GeneratePuzzle();
 	fWorkGrid = new Grid(size);
 
-	BPoint origin = BPoint(0,0);
+	BPoint origin = BPoint(-100,-100);
 
 	for(uint8 row=0; row<size; row++)
 	{
