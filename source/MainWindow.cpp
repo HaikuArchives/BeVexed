@@ -79,7 +79,9 @@ MainWindow::MainWindow(void)
 	fMenuBar->AddItem(menu);
 	
 	BMenu *submenu = new BMenu("New");
+
 	const char* labels[] = { "Beginner", "Easy", "Medium", "Hard", "Master" };
+
 	BMessage msg(M_SET_TILE_COUNT);
 	msg.AddInt8("gridsize", 0);
 
@@ -91,10 +93,14 @@ MainWindow::MainWindow(void)
 	submenu->SetRadioMode(true);
 	menu->AddItem(submenu);
 	menu->AddSeparatorItem();
-	
+
+	BMenuItem* superitem = submenu->Superitem();
+	superitem->SetShortcut('N', B_COMMAND_KEY);
+	superitem->SetMessage(new BMessage(M_NEW_GAME));
+
 	BMenuItem *item = submenu->ItemAt(fGridSize - 3);
 	item->SetMarked(true);
-	
+
 	submenu = new BMenu("Tile Size");
 	submenu->AddItem(new BMenuItem("Small",new BMessage(M_SMALL_TILES)));
 	submenu->AddItem(new BMenuItem("Medium",new BMessage(M_MEDIUM_TILES)));
@@ -105,7 +111,7 @@ MainWindow::MainWindow(void)
 	fBackMenu = new BMenu("Background");
 	menu->AddItem(fBackMenu);
 	ScanBackgrounds();
-	
+
 	switch(fTileSize)
 	{
 		case TILESIZE_SMALL:
@@ -255,6 +261,7 @@ void MainWindow::MessageReceived(BMessage *msg)
 			GenerateGrid(fGridSize);
 			break;
 		}
+		case M_NEW_GAME:
 		case M_SET_TILE_COUNT:	// new game
 		{
 			if (fTimer->Running()) {
@@ -268,8 +275,12 @@ void MainWindow::MessageReceived(BMessage *msg)
 				fTimer->Stop();
 			}
 
-			msg->FindInt8("gridsize", (int8*) &fGridSize);
-			gPreferences.ReplaceInt8("gridsize", fGridSize);
+			int8 gridSize;
+			if (msg->FindInt8("gridsize", (int8*) &gridSize) == B_OK) {
+				fGridSize = gridSize;
+				gPreferences.ReplaceInt8("gridsize", fGridSize);
+			}
+
 			GenerateGrid(fGridSize);
 			break;
 		}
