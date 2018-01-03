@@ -21,6 +21,7 @@ public:
 	
 private:
 	void	GenerateGrid(uint8 size);
+	void  DrawGrid(void);
 	void	ScanBackgrounds(void);
 	void	SetBackground(const char *name);
 	void	PushHighScore(int grid, int score);
