@@ -385,6 +385,9 @@ void MainWindow::GenerateGrid(uint8 size)
 
 void MainWindow::DrawGrid(void)
 {
+
+	uint8 size = fGridSize;
+	
 	while(fGridLayout->CountItems()>0)
 		fGridLayout->RemoveItem((int32)0);
 	while(fWorkGridLayout->CountItems()>0)
