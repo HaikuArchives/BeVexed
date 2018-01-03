@@ -234,7 +234,6 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fTileSize = TILESIZE_SMALL;
 			gPreferences.ReplaceInt8("tilesize",TILESIZE_SMALL);
 			TileView::CalcLayout(fTileSize);
-			// GenerateGrid(fGridSize);
 			DrawGrid();
 			break;
 		}
@@ -243,7 +242,6 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fTileSize = TILESIZE_MEDIUM;
 			gPreferences.ReplaceInt8("tilesize",TILESIZE_MEDIUM);
 			TileView::CalcLayout(fTileSize);
-			// GenerateGrid(fGridSize);
 			DrawGrid();
 			break;
 		}
@@ -252,7 +250,6 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fTileSize = TILESIZE_LARGE;
 			gPreferences.ReplaceInt8("tilesize",TILESIZE_LARGE);
 			TileView::CalcLayout(fTileSize);
-			// GenerateGrid(fGridSize);
 			DrawGrid();
 			break;
 		}
@@ -261,7 +258,6 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fTileSize = TILESIZE_HUGE;
 			gPreferences.ReplaceInt8("tilesize",TILESIZE_LARGE);
 			TileView::CalcLayout(fTileSize);
-			// GenerateGrid(fGridSize);
 			DrawGrid();
 			break;
 		}
@@ -387,7 +383,7 @@ void MainWindow::DrawGrid(void)
 {
 
 	uint8 size = fGridSize;
-	
+
 	while(fGridLayout->CountItems()>0)
 		fGridLayout->RemoveItem((int32)0);
 	while(fWorkGridLayout->CountItems()>0)
