@@ -234,7 +234,7 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fTileSize = TILESIZE_SMALL;
 			gPreferences.ReplaceInt8("tilesize",TILESIZE_SMALL);
 			TileView::CalcLayout(fTileSize);
-			DrawGrid();
+			GenerateGrid(fGridSize);
 			break;
 		}
 		case M_MEDIUM_TILES:
@@ -242,7 +242,7 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fTileSize = TILESIZE_MEDIUM;
 			gPreferences.ReplaceInt8("tilesize",TILESIZE_MEDIUM);
 			TileView::CalcLayout(fTileSize);
-			DrawGrid();
+			GenerateGrid(fGridSize);
 			break;
 		}
 		case M_LARGE_TILES:
@@ -250,7 +250,7 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fTileSize = TILESIZE_LARGE;
 			gPreferences.ReplaceInt8("tilesize",TILESIZE_LARGE);
 			TileView::CalcLayout(fTileSize);
-			DrawGrid();
+			GenerateGrid(fGridSize);
 			break;
 		}
 		case M_HUGE_TILES:
@@ -258,7 +258,7 @@ void MainWindow::MessageReceived(BMessage *msg)
 			fTileSize = TILESIZE_HUGE;
 			gPreferences.ReplaceInt8("tilesize",TILESIZE_LARGE);
 			TileView::CalcLayout(fTileSize);
-			DrawGrid();
+			GenerateGrid(fGridSize);
 			break;
 		}
 		case M_NEW_GAME:
@@ -369,25 +369,16 @@ void MainWindow::GenerateGrid(uint8 size)
 		delete fGrid;
 		delete fWorkGrid;
 	}
-	
-	fGrid = new Grid(size);
-	fGrid->GeneratePuzzle();
-	fWorkGrid = new Grid(size);
-
-	DrawGrid();
-
-	ReloadHighScores();
-}
-
-void MainWindow::DrawGrid(void)
-{
-
-	uint8 size = fGridSize;
 
 	while(fGridLayout->CountItems()>0)
 		fGridLayout->RemoveItem((int32)0);
 	while(fWorkGridLayout->CountItems()>0)
 		fWorkGridLayout->RemoveItem((int32)0);
+	
+	fGrid = new Grid(size);
+	fGrid->GeneratePuzzle();
+	fWorkGrid = new Grid(size);
+
 	BPoint origin = BPoint(-100,-100);
 
 	for(uint8 row=0; row<size; row++)
@@ -414,6 +405,8 @@ void MainWindow::DrawGrid(void)
 
 	BSize psize = fLayout->PreferredSize();
 	ResizeTo(psize.width,psize.height);
+
+	ReloadHighScores();
 }
 
 void MainWindow::ScanBackgrounds(void)
