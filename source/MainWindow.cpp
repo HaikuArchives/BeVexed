@@ -193,7 +193,7 @@ MainWindow::MainWindow(void)
 		.SetInsets(B_USE_ITEM_INSETS)
 		.Add(fHighScores);
 
-	GenerateGrid(fGridSize);
+	GenerateGrid(fGridSize, true);
 
 	BPoint corner;
 	if(gPreferences.FindPoint("corner",&corner)!=B_OK)
@@ -281,7 +281,7 @@ void MainWindow::MessageReceived(BMessage *msg)
 				gPreferences.ReplaceInt8("gridsize", fGridSize);
 			}
 
-			GenerateGrid(fGridSize);
+			GenerateGrid(fGridSize, true);
 			break;
 		}
 		case M_RESET_SCORES:
@@ -348,7 +348,7 @@ void MainWindow::MessageReceived(BMessage *msg)
 						PushHighScore(fGridSize,fTimer->Elapsed());
 						fTimer->Stop();
 
-						GenerateGrid(fGridSize);
+						GenerateGrid(fGridSize, true);
 					}
 				}
 			}
@@ -362,22 +362,20 @@ void MainWindow::MessageReceived(BMessage *msg)
 	}
 }
 
-void MainWindow::GenerateGrid(uint8 size)
+void MainWindow::GenerateGrid(uint8 size, bool newGame)
 {
-	if(fGrid)
-	{
-		delete fGrid;
-		delete fWorkGrid;
-	}
-
 	while(fGridLayout->CountItems()>0)
 		fGridLayout->RemoveItem((int32)0);
 	while(fWorkGridLayout->CountItems()>0)
 		fWorkGridLayout->RemoveItem((int32)0);
-	
-	fGrid = new Grid(size);
-	fGrid->GeneratePuzzle();
-	fWorkGrid = new Grid(size);
+
+	if (newGame) {
+		delete fGrid;
+		delete fWorkGrid;
+		fGrid = new Grid(size);
+		fGrid->GeneratePuzzle();
+		fWorkGrid = new Grid(size);
+	}
 
 	BPoint origin = BPoint(-100,-100);
 
